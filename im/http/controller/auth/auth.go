@@ -6,9 +6,6 @@
 package auth
 
 import (
-	jwtGo "github.com/dgrijalva/jwt-go"
-	"github.com/gin-gonic/gin"
-	"github.com/tidwall/gjson"
 	"go_im/im/http/dao"
 	userModel "go_im/im/http/models/user"
 	"go_im/im/http/validates"
@@ -21,20 +18,25 @@ import (
 	"go_im/pkg/response"
 	"strconv"
 	"time"
+
+	jwtGo "github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
+	"github.com/tidwall/gjson"
 )
+
 type (
-	AuthController struct{}
+	AuthController  struct{}
 	WeiBoController struct{}
-	Me struct {
+	Me              struct {
 		ID             uint64 `json:"id"`
 		Name           string `json:"name"`
 		Avatar         string `json:"avatar"`
 		Email          string `json:"email"`
 		Token          string `json:"token"`
 		ExpirationTime int64  `json:"expiration_time"`
-		Sex int  `json:"sex"`
-		ClientType int  `json:"client_type"`
-		Bio string  `json:"bio"`
+		Sex            int    `json:"sex"`
+		ClientType     int    `json:"client_type"`
+		Bio            string `json:"bio"`
 	}
 )
 
@@ -67,22 +69,21 @@ func (*AuthController) Me(c *gin.Context) {
 // @Param bio formData string false "个性签名"
 // @Param six formData int false "性别"
 
-
 // @Produce json
 // @Success 200
 // @Router /Update [put]
-func (*AuthController) Update(c *gin.Context){
+func (*AuthController) Update(c *gin.Context) {
 	bio := c.PostForm("bio")
 	sex := c.PostForm("sex")
 	user := userModel.AuthUser
-	var users  userModel.Users
+	var users userModel.Users
 	if len(sex) != 0 {
-		sex,_ :=strconv.Atoi(sex)
+		sex, _ := strconv.Atoi(sex)
 		users.Sex = sex
 	}
-	users.Bio =bio
+	users.Bio = bio
 
-	model.DB.Table("users").Where("id",user.ID).First(&users)
+	model.DB.Table("users").Where("id", user.ID).First(&users)
 	users.Bio = bio
 	model.DB.Save(&users)
 	response.SuccessResponse().WriteTo(c)
@@ -103,15 +104,15 @@ func (*AuthController) Update(c *gin.Context){
 // @Router /login [post]
 func (that *AuthController) Login(c *gin.Context) {
 	_user := userModel.Users{
-		Name: c.PostForm("name"),
+		Name:     c.PostForm("name"),
 		Password: c.PostForm("password"),
 	}
 
-    ClientType,_ := strconv.Atoi(c.DefaultPostForm("client_type","0"))
+	ClientType, _ := strconv.Atoi(c.DefaultPostForm("client_type", "0"))
 
 	errs := validates.ValidateLoginForm(_user)
-	if len(errs) >0 {
-		response.ErrorResponse(500,"参数错误",errs).WriteTo(c)
+	if len(errs) > 0 {
+		response.ErrorResponse(500, "参数错误", errs).WriteTo(c)
 		return
 	}
 	var users userModel.Users
@@ -128,14 +129,12 @@ func (that *AuthController) Login(c *gin.Context) {
 	users.ClientType = ClientType
 	model.DB.Model(&userModel.Users{}).Save(&users)
 	//挤下线操作
-	if(users.Status == 1) {
+	if users.Status == 1 {
 		ws.CrowdedOffline(strconv.Itoa(int(users.ID)))
 	}
 
-
 	generateToken(c, &users)
 }
-
 
 func (*WeiBoController) WeiBoCallBack(c *gin.Context) {
 	code := c.Query("code")
@@ -145,7 +144,7 @@ func (*WeiBoController) WeiBoCallBack(c *gin.Context) {
 	access_token := utils.GetWeiBoAccessToken(&code)
 	UserInfo := utils.GetWeiBoUserInfo(&access_token)
 	users := userModel.Users{}
-	oauth_id := gjson.Get(UserInfo,"id").Raw
+	oauth_id := gjson.Get(UserInfo, "id").Raw
 	isThere := model.DB.Where("oauth_id = ?", oauth_id).First(&users)
 	if isThere.Error != nil {
 		userData := userModel.Users{
@@ -160,8 +159,6 @@ func (*WeiBoController) WeiBoCallBack(c *gin.Context) {
 		}
 		result := model.DB.Create(&userData)
 
-
-
 		if result.Error != nil {
 			response.FailResponse(500, "用户微博授权失败").ToJson(c)
 		} else {
@@ -174,8 +171,9 @@ func (*WeiBoController) WeiBoCallBack(c *gin.Context) {
 		generateToken(c, &users)
 	}
 }
+
 //d55894389fe5bca5833cf28aa4384b04 EngV58oPYmhoIKIbBkFh3KLcRMqr9ke8x1I1KcSONwn
-func (*AuthController) WxCallback(c *gin.Context)  {
+func (*AuthController) WxCallback(c *gin.Context) {
 	response.SuccessResponse().ToJson(c)
 	return
 }
@@ -201,7 +199,6 @@ func generateToken(c *gin.Context, user *userModel.Users) {
 		response.FailResponse(403, "jwt token颁发失败~").ToJson(c)
 		return
 	} else {
-
 
 		data := new(Me)
 		data.ID = user.ID

@@ -6,9 +6,10 @@
 package config
 
 import (
+	"log"
+
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
-	"log"
 )
 
 var Viper *viper.Viper
@@ -49,6 +50,7 @@ func Env(envName string, defaultValue ...interface{}) interface{} {
 
 // Add 新增配置项
 func Add(name string, configuration map[string]interface{}) {
+	// Viper.Set会对传入的configurattion进行for循环,如果碰到可以继续for的则继续循环.
 	Viper.Set(name, configuration)
 }
 
@@ -83,7 +85,6 @@ func GetInt64(path string, defaultValue ...interface{}) int64 {
 func GetInt32(path string, defaultValue ...interface{}) int32 {
 	return cast.ToInt32(Get(path, defaultValue...))
 }
-
 
 // GetUint 获取 Uint 类型的配置信息
 func GetUint(path string, defaultValue ...interface{}) uint {
